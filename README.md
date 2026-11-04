@@ -1,7 +1,6 @@
-# AntFlow Guard — Cross-Border Payment Routing, FX Settlement & AI Anomaly Triage Engine
+# AntFlow Guard — Cross-Border Payment Routing, FX Settlement & Real-Time Anomaly Engine
 
-> **Architected for Ant International (TRX Global Development Centre, Kuala Lumpur)**  
-> *Targeted Role: Applied AI Engineer (FinTech Microservices & AI-Native SDLC)*
+> A production-grade distributed microservice and operator console for high-reliability cross-border merchant settlements, multi-currency wallet ledger management, and real-time FX anomaly triage.
 
 [![CI/CD Pipeline](https://github.com/your-username/antflow-guard/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-username/antflow-guard/actions)
 [![Python 3.12](https://img.shields.io/badge/Python-3.12-blue.svg)](https://www.python.org/)
@@ -15,7 +14,7 @@
 
 ## 1. Project Overview & Architectural Pitch
 
-**AntFlow Guard** is a mission-critical cross-border merchant settlement API and real-time operator console inspired by Ant International's global commerce rails (**Alipay+**, **Antom**, and **WorldFirst**).
+**AntFlow Guard** is a mission-critical cross-border merchant settlement API and real-time operator console designed for global digital commerce, multi-currency treasury operations, and regional e-wallet interoperability.
 
 The engine handles multi-currency transactions across Southeast Asia and global corridors (CNY $\rightarrow$ MYR, USD $\rightarrow$ MYR, SGD $\rightarrow$ MYR), enforcing:
 - **Zero Double-Charging Guarantees:** Strict deduplication via `X-Idempotency-Key` and resilient recovery against in-flight race conditions.
@@ -135,7 +134,7 @@ As part of the AI-Native SDLC mandate, two real-world FinTech vulnerabilities we
 
 ---
 
-## 6. Resume Bullet Points (For Ant International & FinTech Roles)
+## 6. Core Architectural & Engineering Highlights
 
 - **Core Backend & Concurrency:** *Engineered an asynchronous cross-border payment settlement API and multi-currency ledger in FastAPI and PostgreSQL, enforcing strict `NUMERIC(18, 4)` precision, `X-Idempotency-Key` deduplication, and pessimistic row-level locking (`SELECT ... FOR UPDATE`) to eliminate double-spend race conditions under concurrent load.*
 - **AI-Native Engineering & SDLC:** *Designed a spec-driven, AI-native engineering workflow governed by an explicit AI constitution (`.antigravity/rules.md`) and property-based test suites, validating sub-cent financial invariants across 500 randomized parameter matrices using Hypothesis.*

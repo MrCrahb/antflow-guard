@@ -181,11 +181,11 @@ export default function Dashboard() {
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
               AntFlow Guard
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                TRX Engine v1.1
+                Core Engine v1.1
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Cross-Border Settlement & Live Interbank FX Engine (Alipay+, WorldFirst, Falcon)
+              Cross-Border Settlement & Live Interbank FX Engine (Multi-Currency & Dynamic Spread Triage)
             </p>
           </div>
         </div>

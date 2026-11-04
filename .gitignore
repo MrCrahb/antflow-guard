@@ -8,6 +8,7 @@ __pycache__/
 htmlcov/
 .env
 *.db
+*.pdf
 node_modules/
 .next/
 dist/

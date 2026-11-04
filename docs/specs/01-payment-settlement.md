@@ -8,7 +8,7 @@
 ---
 
 ## 1. Business Problem
-Ant International connects global consumers (paying via local wallets like Touch 'n Go, GCash, KakaoPay, Alipay+) to cross-border merchants who require settlement in their local operating currency (MYR, SGD, USD).
+Global digital payment platforms connect consumers (paying via regional digital wallets like Touch 'n Go, GCash, KakaoPay, Alipay+) to cross-border merchants who require settlement in their local operating currency (MYR, SGD, USD).
 To prevent severe financial loss:
 1. Every payment mutation MUST be strictly idempotent. A merchant or buyer resending the same request over a flaky network connection must never be charged or credited twice.
 2. Concurrent settlement payouts against a merchant wallet balance must be serialized using pessimistic row locking to prevent negative balances or double-spend race conditions.

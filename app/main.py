@@ -18,8 +18,8 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AntFlow Guard — Cross-Border Settlement & FX Anomaly Engine",
     description=(
-        "Production-grade cross-border payment settlement microservice inspired by "
-        "Ant International's TRX Global Development Centre architecture (Alipay+, Antom, WorldFirst)."
+        "Production-grade distributed cross-border payment settlement microservice featuring "
+        "idempotent ledger mutations, optimistic/pessimistic locking, and real-time interbank FX risk triage."
     ),
     version="1.0.0",
     lifespan=lifespan,

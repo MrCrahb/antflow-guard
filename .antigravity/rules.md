@@ -1,7 +1,7 @@
 # AntFlow Guard — AI Engineering & Learning Constitution
 
 ## 1. Domain Context
-We are building AntFlow Guard, a high-reliability cross-border payment settlement and FX risk microservice tailored to the Ant International ecosystem (Alipay+, Antom, WorldFirst).
+We are building AntFlow Guard, a high-reliability cross-border payment settlement and FX risk microservice tailored to high-throughput global commerce and digital wallet interoperability.
 
 ## 2. Non-Negotiable Financial Engineering Standards
 - **NO FLOATS FOR MONEY:** Strictly use Python `decimal.Decimal` and PostgreSQL `NUMERIC(18, 4)` for monetary amounts and `NUMERIC(18, 6)` for FX rates. Never use floating-point numbers.
