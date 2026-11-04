@@ -1,0 +1,33 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: antflow_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ant_dev
+      POSTGRES_PASSWORD: ant_dev_password
+      POSTGRES_DB: antflow_db
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ant_dev -d antflow_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  api:
+    build: .
+    container_name: antflow_api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://ant_dev:ant_dev_password@db:5432/antflow_db
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:

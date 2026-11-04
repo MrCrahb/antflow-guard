@@ -1,0 +1,96 @@
+name: AntFlow Guard CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  quality-and-security:
+    name: Code Quality & SAST Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Linters & Security Scanners
+        run: pip install ruff bandit
+
+      - name: Run Ruff (Lint & Style Check)
+        run: ruff check app/ tests/
+
+      - name: Run Bandit (SAST Security Scan for FinTech Vulnerabilities)
+        run: bandit -r app/ -ll
+
+  integration-tests:
+    name: PostgreSQL Integration & Concurrency Tests
+    needs: quality-and-security
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: ant_test
+          POSTGRES_PASSWORD: ant_test_password
+          POSTGRES_DB: antflow_test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql+asyncpg://ant_test:ant_test_password@localhost:5432/antflow_test_db
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Pytest (Unit, Idempotency & Concurrency Suite)
+        id: run_pytest
+        run: |
+          pytest --cov=app --cov-report=xml -v | tee pytest_output.log
+
+      - name: AI Failure Triage (Gemini Flash)
+        if: failure() && env.GEMINI_API_KEY != ''
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          python -c '
+          import os, json, urllib.request
+
+          api_key = os.environ.get("GEMINI_API_KEY")
+          if not api_key:
+              exit(0)
+
+          log_content = open("pytest_output.log").read()[-4000:]
+          prompt = f"Analyze this CI failure log for AntFlow Guard FinTech backend and provide a root cause analysis and patch:\n\n{log_content}"
+          
+          url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+          data = json.dumps({"contents": [{"parts": [{"text": prompt}]}]}).encode("utf-8")
+          req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
+          try:
+              with urllib.request.urlopen(req) as resp:
+                  result = json.loads(resp.read().decode("utf-8"))
+                  analysis = result["candidates"][0]["content"]["parts"][0]["text"]
+                  print("=== AI FAILURE TRIAGE ANALYSIS ===")
+                  print(analysis)
+          except Exception as e:
+              print(f"AI Triage skipped: {e}")
+          '
