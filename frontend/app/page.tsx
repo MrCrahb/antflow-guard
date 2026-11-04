@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   ShieldCheck,
   AlertTriangle,
@@ -12,6 +12,8 @@ import {
   Activity,
   Layers,
   ArrowRightLeft,
+  Globe,
+  Sparkles,
 } from "lucide-react";
 
 interface Transaction {
@@ -45,23 +47,56 @@ interface Reconciliation {
   };
 }
 
+const CURRENCY_REGISTRY: Record<string, { name: string; wallet: string; flag: string }> = {
+  CNY: { name: "Chinese Yuan", wallet: "Alipay+ / UnionPay", flag: "🇨🇳" },
+  MYR: { name: "Malaysian Ringgit", wallet: "Touch 'n Go / DuitNow", flag: "🇲🇾" },
+  SGD: { name: "Singapore Dollar", wallet: "PayNow / NETS", flag: "🇸🇬" },
+  USD: { name: "US Dollar", wallet: "WorldFirst Global Treasury", flag: "🇺🇸" },
+  IDR: { name: "Indonesian Rupiah", wallet: "DANA / OVO", flag: "🇮🇩" },
+  PHP: { name: "Philippine Peso", wallet: "GCash / Maya", flag: "🇵🇭" },
+  THB: { name: "Thai Baht", wallet: "TrueMoney / PromptPay", flag: "🇹🇭" },
+  KRW: { name: "South Korean Won", wallet: "KakaoPay / Toss", flag: "🇰🇷" },
+  JPY: { name: "Japanese Yen", wallet: "PayPay", flag: "🇯🇵" },
+  EUR: { name: "Euro", wallet: "WorldFirst Europe", flag: "🇪🇺" },
+  GBP: { name: "British Pound", wallet: "WorldFirst UK", flag: "🇬🇧" },
+  HKD: { name: "Hong Kong Dollar", wallet: "AlipayHK", flag: "🇭🇰" },
+};
+
 export default function Dashboard() {
   const [backendUrl] = useState("http://localhost:8000");
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [reconciliation, setReconciliation] = useState<Reconciliation | null>(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingFx, setFetchingFx] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Form State for Payment Simulation
+  // Form State
   const [merchantId, setMerchantId] = useState("merch_trx_kl_01");
   const [sourceAmount, setSourceAmount] = useState("1000.0000");
   const [sourceCurrency, setSourceCurrency] = useState("CNY");
   const [settledCurrency, setSettledCurrency] = useState("MYR");
-  const [fxRate, setFxRate] = useState("0.648520");
+  const [fxRate, setFxRate] = useState("0.608532");
+  const [marketRate, setMarketRate] = useState<string | null>(null);
   const [idempotencyKey, setIdempotencyKey] = useState("tx-" + Date.now());
   const [lastResponse, setLastResponse] = useState<any>(null);
 
-  const fetchDashboardData = async () => {
+  const fetchLiveRate = useCallback(async (base: string, target: string) => {
+    setFetchingFx(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/v1/fx-rate?base=${base}&target=${target}`);
+      if (res.ok) {
+        const data = await res.json();
+        setFxRate(data.market_rate);
+        setMarketRate(data.market_rate);
+      }
+    } catch (e) {
+      console.warn("Could not fetch live FX rate:", e);
+    } finally {
+      setFetchingFx(false);
+    }
+  }, [backendUrl]);
+
+  const fetchDashboardData = useCallback(async () => {
     try {
       const txRes = await fetch(`${backendUrl}/api/v1/transactions?limit=20`);
       if (txRes.ok) {
@@ -77,15 +112,20 @@ export default function Dashboard() {
         setReconciliation(recData);
       }
     } catch (err: any) {
-      console.warn("Backend not yet connected:", err.message);
+      console.warn("Backend poll warning:", err.message);
     }
-  };
+  }, [backendUrl, merchantId, settledCurrency]);
+
+  // When currency changes, automatically fetch live interbank rate
+  useEffect(() => {
+    fetchLiveRate(sourceCurrency, settledCurrency);
+  }, [sourceCurrency, settledCurrency, fetchLiveRate]);
 
   useEffect(() => {
     fetchDashboardData();
     const interval = setInterval(fetchDashboardData, 3000);
     return () => clearInterval(interval);
-  }, [merchantId, settledCurrency]);
+  }, [fetchDashboardData]);
 
   const handleSimulatePayment = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -126,36 +166,39 @@ export default function Dashboard() {
     setIdempotencyKey("tx-" + Math.random().toString(36).substring(2, 10) + "-" + Date.now());
   };
 
+  const sourceInfo = CURRENCY_REGISTRY[sourceCurrency] || { name: sourceCurrency, wallet: "Global", flag: "🌐" };
+  const targetInfo = CURRENCY_REGISTRY[settledCurrency] || { name: settledCurrency, wallet: "Local", flag: "🌐" };
+
   return (
-    <div className="min-h-screen bg-[#070d1e] text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-[#070d1e] text-slate-100 flex flex-col font-sans">
       {/* Top Navbar */}
-      <header className="border-b border-slate-800 bg-[#0d162d]/80 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
+      <header className="border-b border-slate-800 bg-[#0d162d]/90 backdrop-blur sticky top-0 z-50 px-6 py-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="bg-blue-600 p-2 rounded-lg text-white shadow-lg shadow-blue-500/20">
+          <div className="bg-blue-600 p-2.5 rounded-xl text-white shadow-lg shadow-blue-500/20">
             <ShieldCheck className="w-6 h-6" />
           </div>
           <div>
             <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-2">
               AntFlow Guard
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20">
-                TRX Engine v1.0
+                TRX Engine v1.1
               </span>
             </h1>
             <p className="text-xs text-slate-400">
-              Cross-Border Settlement, Falcon FX Routing & AI Anomaly Triage
+              Cross-Border Settlement & Live Interbank FX Engine (Alipay+, WorldFirst, Falcon)
             </p>
           </div>
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-xs bg-slate-800/60 px-3 py-1.5 rounded-full border border-slate-700">
+          <div className="flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            <span className="text-slate-300">FastAPI Async Engine (Port 8000)</span>
+            <span className="text-slate-300 font-medium">FastAPI Engine (Port 8000)</span>
           </div>
           <button
             onClick={fetchDashboardData}
             className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition"
-            title="Refresh Ledger"
+            title="Refresh Feed"
           >
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -201,7 +244,7 @@ export default function Dashboard() {
             <div className="text-2xl font-mono font-bold text-amber-400">
               {reconciliation?.summary.flagged_count || 0}
             </div>
-            <div className="text-xs text-slate-400 mt-2">Auto-Held for Review</div>
+            <div className="text-xs text-slate-400 mt-2">Auto-Quarantined from Wallet</div>
           </div>
 
           <div className="bg-[#111c38] border border-slate-800 rounded-xl p-5 shadow-sm">
@@ -219,7 +262,7 @@ export default function Dashboard() {
                   100% Sub-Cent Reconciled
                 </>
               ) : (
-                <span className="text-amber-400">Unbalanced Variance</span>
+                <span className="text-amber-400">Variance Detected</span>
               )}
             </div>
           </div>
@@ -229,10 +272,27 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Simulator Form */}
           <div className="bg-[#111c38] border border-slate-800 rounded-xl p-6 shadow-sm">
-            <h2 className="text-base font-semibold text-white flex items-center gap-2 mb-4">
-              <ArrowRightLeft className="w-4 h-4 text-blue-400" />
-              Settle Payment Simulation
-            </h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-base font-semibold text-white flex items-center gap-2">
+                <ArrowRightLeft className="w-4 h-4 text-blue-400" />
+                Cross-Border FX Settlement
+              </h2>
+              <span className="text-xs font-medium text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 flex items-center gap-1">
+                <Globe className="w-3 h-3" /> Live Interbank
+              </span>
+            </div>
+
+            {/* Corridor Pill */}
+            <div className="mb-4 p-2.5 bg-[#0a1226] border border-slate-700/80 rounded-lg flex items-center justify-between text-xs font-medium">
+              <div className="flex items-center gap-2">
+                <span>{sourceInfo.flag} {sourceCurrency}</span>
+                <span className="text-slate-500">→</span>
+                <span>{targetInfo.flag} {settledCurrency}</span>
+              </div>
+              <span className="text-slate-400 font-mono text-[11px]">
+                {sourceInfo.wallet} → {targetInfo.wallet}
+              </span>
+            </div>
 
             <form onSubmit={handleSimulatePayment} className="space-y-4 text-sm">
               <div>
@@ -248,6 +308,7 @@ export default function Dashboard() {
                 />
               </div>
 
+              {/* Source Amount and Currency */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
@@ -263,36 +324,56 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
-                    Source Currency
+                    Payer Currency
                   </label>
                   <select
                     value={sourceCurrency}
                     onChange={(e) => setSourceCurrency(e.target.value)}
-                    className="w-full bg-[#0a1226] border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-blue-500 outline-none"
+                    className="w-full bg-[#0a1226] border border-slate-700 rounded-lg px-2.5 py-2 text-white focus:border-blue-500 outline-none text-xs"
                   >
-                    <option value="CNY">CNY (Alipay+)</option>
-                    <option value="USD">USD (WorldFirst)</option>
-                    <option value="SGD">SGD</option>
+                    {Object.entries(CURRENCY_REGISTRY).map(([code, meta]) => (
+                      <option key={code} value={code}>
+                        {meta.flag} {code} - {meta.wallet}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
 
+              {/* Settled Currency and FX Rate */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs font-medium text-slate-400 mb-1">
                     Settled Currency
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={settledCurrency}
-                    readOnly
-                    className="w-full bg-[#0a1226]/50 border border-slate-800 rounded-lg px-3 py-2 text-slate-400 font-mono"
-                  />
+                    onChange={(e) => setSettledCurrency(e.target.value)}
+                    className="w-full bg-[#0a1226] border border-slate-700 rounded-lg px-2.5 py-2 text-white focus:border-blue-500 outline-none text-xs"
+                  >
+                    {Object.entries(CURRENCY_REGISTRY).map(([code, meta]) => (
+                      <option key={code} value={code}>
+                        {meta.flag} {code} - {meta.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
+
                 <div>
-                  <label className="block text-xs font-medium text-slate-400 mb-1">
-                    FX Rate Applied
-                  </label>
+                  <div className="flex justify-between items-center mb-1">
+                    <label className="text-xs font-medium text-slate-400">
+                      FX Rate Applied
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => fetchLiveRate(sourceCurrency, settledCurrency)}
+                      className="text-[10px] text-blue-400 hover:text-blue-300 flex items-center gap-0.5"
+                      title="Sync with Interbank API"
+                    >
+                      <RefreshCw className={`w-2.5 h-2.5 ${fetchingFx ? "animate-spin" : ""}`} />
+                      Sync Live
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={fxRate}
@@ -300,9 +381,15 @@ export default function Dashboard() {
                     className="w-full bg-[#0a1226] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:border-blue-500 outline-none"
                     required
                   />
+                  {marketRate && (
+                    <span className="text-[10px] text-slate-400 mt-1 block">
+                      Live market: <span className="font-mono text-emerald-400">{marketRate}</span>
+                    </span>
+                  )}
                 </div>
               </div>
 
+              {/* Idempotency Key */}
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="text-xs font-medium text-slate-400">
@@ -311,9 +398,9 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={generateNewKey}
-                    className="text-xs text-blue-400 hover:text-blue-300"
+                    className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
                   >
-                    Generate New
+                    <Sparkles className="w-3 h-3" /> New Key
                   </button>
                 </div>
                 <input
@@ -338,7 +425,7 @@ export default function Dashboard() {
             {/* Response Banner */}
             {lastResponse && (
               <div
-                className={`mt-4 p-3.5 rounded-lg border text-xs font-mono space-y-1 ${
+                className={`mt-4 p-3.5 rounded-lg border text-xs font-mono space-y-1.5 ${
                   lastResponse.idempotent_replay
                     ? "bg-purple-950/40 border-purple-800/60 text-purple-200"
                     : lastResponse.status === "FLAGGED_HIGH_RISK"
@@ -355,6 +442,11 @@ export default function Dashboard() {
                 </div>
                 <div>Settled: {lastResponse.settled_amount} {lastResponse.settled_currency}</div>
                 <div>New Balance: {lastResponse.new_wallet_balance} {lastResponse.settled_currency}</div>
+                {lastResponse.status === "FLAGGED_HIGH_RISK" && (
+                  <div className="text-[11px] text-amber-300 font-sans mt-1">
+                    ⚠️ Quarantined: Funds held under review. Balance uncharged.
+                  </div>
+                )}
               </div>
             )}
 
@@ -382,7 +474,7 @@ export default function Dashboard() {
                 <thead>
                   <tr className="border-b border-slate-800 text-slate-400">
                     <th className="pb-3 font-medium">Idempotency Key</th>
-                    <th className="pb-3 font-medium">Source</th>
+                    <th className="pb-3 font-medium">Payer Source</th>
                     <th className="pb-3 font-medium">FX Rate</th>
                     <th className="pb-3 font-medium">Settled Amount</th>
                     <th className="pb-3 font-medium">Status</th>

@@ -2,18 +2,18 @@ import asyncio
 import time
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_EVEN
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.ledger import RiskAuditLog, Transaction, Wallet
 from app.schemas.payment import PaymentSettlementRequest, PaymentSettlementResponse
+from app.services.fx_service import get_live_fx_rate
 
 FOUR_PLACES = Decimal("0.0001")
 
-# In-memory synchronization lock per merchant/currency to support engines without native row-level locking (e.g., SQLite tests)
-# On PostgreSQL, SELECT ... FOR UPDATE provides multi-process row locking across distributed instances.
+# In-memory synchronization lock per merchant/currency to support engines without native row-level locking
 _wallet_memory_locks: Dict[Tuple[str, str], asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
@@ -24,7 +24,9 @@ def calculate_settled_amount(source_amount: Decimal, fx_rate: Decimal) -> Decima
 
 
 def evaluate_transaction_risk(
-    payload: PaymentSettlementRequest, settled_amount: Decimal
+    payload: PaymentSettlementRequest,
+    settled_amount: Decimal,
+    market_rate: Optional[Decimal] = None,
 ) -> Tuple[int, Dict[str, Any]]:
     """Deterministic heuristic + statistical threshold check for cross-border anomalies."""
     risk_score = 0
@@ -35,11 +37,20 @@ def evaluate_transaction_risk(
         risk_score += 65
         reasons.append("LARGE_SETTLEMENT_VOLUME_SPIKE")
 
-    # Rule 2: Abnormal FX rate deviation check (e.g., CNY -> MYR outside normal [0.55, 0.75] corridor)
-    if payload.source_currency == "CNY" and payload.settled_currency == "MYR":
-        if not (Decimal("0.550000") <= payload.fx_rate <= Decimal("0.750000")):
-            risk_score += 50
-            reasons.append("FX_RATE_CORRIDOR_ANOMALY")
+    # Rule 2: Dynamic FX market divergence and slippage anomaly
+    if market_rate is not None and market_rate > Decimal("0"):
+        # Calculate percentage deviation from the real-time interbank market rate
+        deviation = abs(payload.fx_rate - market_rate) / market_rate
+        if deviation > Decimal("0.10"):  # Greater than 10% deviation from interbank market
+            risk_score += 60
+            pct_str = f"{float(deviation * 100):.1f}%"
+            reasons.append(f"FX_MARKET_DIVERGENCE_ANOMALY (Deviation: {pct_str})")
+    else:
+        # Static fallback corridor check for CNY -> MYR
+        if payload.source_currency == "CNY" and payload.settled_currency == "MYR":
+            if not (Decimal("0.550000") <= payload.fx_rate <= Decimal("0.750000")):
+                risk_score += 50
+                reasons.append("FX_RATE_CORRIDOR_ANOMALY")
 
     return min(risk_score, 100), {"flags": reasons}
 
@@ -53,7 +64,6 @@ async def settle_cross_border_payment(
     start_time = time.perf_counter()
     lock_key = (payload.merchant_id, payload.settled_currency)
 
-    # Acquire lock for this merchant currency wallet
     async with _wallet_memory_locks[lock_key]:
         try:
             async with session.begin():
@@ -109,7 +119,14 @@ async def settle_cross_border_payment(
 
                 # Step 3: Compute FX Settlement & Run Risk Triage
                 settled_amount = calculate_settled_amount(payload.source_amount, payload.fx_rate)
-                risk_score, risk_meta = evaluate_transaction_risk(payload, settled_amount)
+
+                # Fetch real-time market benchmark rate for dynamic anomaly evaluation
+                market_rate = await get_live_fx_rate(
+                    payload.source_currency, payload.settled_currency
+                )
+                risk_score, risk_meta = evaluate_transaction_risk(
+                    payload, settled_amount, market_rate=market_rate
+                )
                 status = "FLAGGED_HIGH_RISK" if risk_score >= 60 else "SETTLED"
 
                 # Only credit wallet balance if settlement is clean
@@ -165,8 +182,6 @@ async def settle_cross_border_payment(
 
         except IntegrityError:
             # Step 5: Graceful Race-Condition Handling
-            # If two concurrent requests with identical X-Idempotency-Key arrived simultaneously,
-            # wait briefly and retry fetching the committed transaction.
             for attempt in range(5):
                 await asyncio.sleep(0.05 * (attempt + 1))
                 async with session.begin():

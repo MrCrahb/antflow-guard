@@ -1,5 +1,5 @@
 from decimal import Decimal
-from typing import List, Optional
+from typing import Dict, List, Optional
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +13,37 @@ from app.schemas.payment import (
     ReconciliationResponse,
     ReconciliationSummary,
 )
+from app.services.fx_service import SUPPORTED_CURRENCIES, get_live_fx_rate
 from app.services.settlement import settle_cross_border_payment
 
 router = APIRouter(prefix="/api/v1", tags=["Cross-Border Settlement"])
+
+
+@router.get(
+    "/currencies",
+    summary="List Supported Cross-Border Currencies & E-Wallets",
+)
+async def list_currencies() -> Dict[str, Dict[str, str]]:
+    """Returns all supported regional e-wallets, domestic payment schemes, and trade currencies."""
+    return SUPPORTED_CURRENCIES
+
+
+@router.get(
+    "/fx-rate",
+    summary="Fetch Live Interbank Market FX Rate",
+)
+async def get_fx_rate(
+    base: str = Query("CNY", min_length=3, max_length=3, description="Base currency code"),
+    target: str = Query("MYR", min_length=3, max_length=3, description="Target currency code"),
+):
+    """Fetches real-time foreign exchange rate from live interbank feeds with caching."""
+    rate = await get_live_fx_rate(base.upper(), target.upper())
+    return {
+        "base_currency": base.upper(),
+        "target_currency": target.upper(),
+        "market_rate": str(rate),
+        "source": "Interbank Market Live Feed",
+    }
 
 
 @router.post(
@@ -75,7 +103,6 @@ async def get_merchant_reconciliation(
     currency: str = Query("MYR", pattern="^[A-Z]{3}$"),
     session: AsyncSession = Depends(get_db),
 ) -> ReconciliationResponse:
-    # 1. Fetch current wallet balance
     wallet_stmt = select(Wallet).where(
         Wallet.merchant_id == merchant_id,
         Wallet.currency == currency,
@@ -83,7 +110,6 @@ async def get_merchant_reconciliation(
     wallet = (await session.execute(wallet_stmt)).scalar_one_or_none()
     current_balance = wallet.balance if wallet else Decimal("0.0000")
 
-    # 2. Compute ledger aggregate sums
     tx_stmt = select(
         func.count(Transaction.id).label("total_count"),
         func.coalesce(
