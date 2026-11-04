@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AntFlow Guard — System Architecture & Tech Stack</title>
+<style>
+:root {
+  color-scheme: light;
+  --color-paper:   oklch(98.5% 0.004 250);
+  --color-paper-2: oklch(96.5% 0.005 252);
+  --color-rule:    oklch(93% 0.007 255);
+  --color-rule-2:  oklch(83% 0.011 255);
+  --color-muted:   oklch(56% 0.013 255);
+  --color-neutral: oklch(46% 0.015 255);
+  --color-ink-2:   oklch(34% 0.018 257);
+  --color-ink:     oklch(24% 0.020 258);
+  --color-accent:  oklch(58% 0.20 256);
+  --color-graphite:oklch(24% 0.018 260);
+
+  --color-g1:      oklch(68% 0.15 55);
+  --color-g1-soft: oklch(78% 0.12 55);
+  --color-g1-ink:  oklch(52% 0.14 50);
+  --color-g1-tint: oklch(96.5% 0.015 60 / .5);
+
+  --color-accent-soft: oklch(58% 0.20 256 / .45);
+  --color-accent-tint: oklch(97% 0.012 256 / .5);
+
+  --font-display: "Geist", system-ui, -apple-system, sans-serif;
+  --font-body: system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  --space-xs: 4px; --space-sm: 8px; --space-md: 16px; --space-lg: 24px; --space-xl: 40px; --space-2xl: 64px;
+  --radius-card: 10px; --radius-tile: 12px;
+  --color-veil: oklch(98.5% 0.004 250 / .85);
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-paper:   oklch(18% 0.012 255);
+  --color-paper-2: oklch(22% 0.014 255);
+  --color-rule:    oklch(24% 0.013 255);
+  --color-rule-2:  oklch(38% 0.018 255);
+  --color-muted:   oklch(65% 0.014 255);
+  --color-neutral: oklch(72% 0.012 255);
+  --color-ink-2:   oklch(85% 0.010 255);
+  --color-ink:     oklch(94% 0.008 255);
+  --color-accent:  oklch(70% 0.16 256);
+  --color-graphite:oklch(31% 0.020 260);
+  --color-g1:      oklch(70% 0.14 55);
+  --color-g1-soft: oklch(58% 0.11 55);
+  --color-g1-ink:  oklch(78% 0.12 55);
+  --color-g1-tint: oklch(26% 0.030 60 / .40);
+  --color-accent-soft: oklch(70% 0.16 256 / .5);
+  --color-accent-tint: oklch(28% 0.045 256 / .35);
+  --color-veil: oklch(18% 0.012 255 / .85);
+}
+
+@font-face {
+  font-family: "Geist";
+  src: url("data:font/woff2;base64,%%FONT_DISPLAY%%") format("woff2");
+  font-weight: 400 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  src: url("data:font/woff2;base64,%%FONT_JBM%%") format("woff2");
+  font-weight: 400 600;
+  font-display: swap;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin:0; padding:0; }
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  padding: var(--space-xl) var(--space-md);
+  display: flex;
+  justify-content: center;
+}
+
+.page { width: 1040px; max-width: 100%; }
+
+.head { margin-bottom: var(--space-lg); }
+.kicker { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--color-accent); margin-bottom: 4px; font-weight: 600; }
+.head h1 { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--color-ink); }
+.lede { font-size: 14px; color: var(--color-muted); margin-top: 4px; }
+
+.scroller {
+  overflow-x: auto;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-card);
+  background: var(--color-paper-2);
+  padding: 20px;
+}
+
+.canvas {
+  position: relative;
+  width: 1000px;
+  height: 520px;
+  background-color: var(--color-paper);
+  background-image: 
+    linear-gradient(var(--color-rule) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-rule) 1px, transparent 1px);
+  background-size: 20px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--color-rule);
+}
+
+.group {
+  position: absolute;
+  border-radius: 8px;
+  border: 1.5px solid;
+  pointer-events: none;
+}
+.group.ga {
+  border-color: var(--color-accent-soft);
+  background: var(--color-accent-tint);
+}
+.group.gb {
+  border-color: var(--color-g1-soft);
+  background: var(--color-g1-tint);
+}
+.g-label {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-ink-2);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.g-label img { width: 14px; height: 14px; object-fit: contain; }
+
+.node {
+  position: absolute;
+  width: 132px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.tile {
+  width: 60px;
+  height: 60px;
+  background: #ffffff;
+  border: 1px solid var(--color-rule-2);
+  border-radius: var(--radius-tile);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+}
+.tile img { width: 34px; height: 34px; object-fit: contain; }
+
+.node .name { font-family: var(--font-display); font-weight: 600; font-size: 12.5px; margin-top: 6px; }
+.node .role { font-family: var(--font-mono); font-size: 9.5px; color: var(--color-muted); margin-top: 2px; }
+.node .name span, .node .role span {
+  background: var(--color-veil);
+  padding: 0 4px;
+  border-radius: 3px;
+}
+
+svg.edges { position: absolute; inset: 0; width: 1000px; height: 520px; pointer-events: none; }
+.e { stroke: var(--color-accent); stroke-width: 1.8; fill: none; }
+.n { stroke: var(--color-neutral); stroke-width: 1.4; fill: none; }
+.dash { stroke-dasharray: 4 4; }
+.el { font-family: var(--font-mono); font-size: 10px; fill: var(--color-neutral);
+  paint-order: stroke; stroke: var(--color-paper); stroke-width: 4px; stroke-linejoin: round; }
+.el.a { fill: var(--color-accent); font-weight: 600; }
+
+.legend {
+  display: flex;
+  gap: var(--space-lg);
+  align-items: center;
+  margin-top: var(--space-md);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+.legend .sw { display: inline-block; width: 28px; vertical-align: middle; margin-right: 6px; border-top: 2px solid var(--color-accent); }
+.legend .sw.n { border-color: var(--color-neutral); border-top-width: 1.5px; }
+.legend .sw.dash { border-top-style: dashed; }
+
+.foot {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--color-rule-2);
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--color-muted);
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="head">
+    <div class="kicker">AntFlow Guard · Architecture Specification · 2026</div>
+    <h1>System Architecture & Technology Stack</h1>
+    <p class="lede">Cross-Border Payment Routing, Pessimistic Multi-Currency Ledger & Real-Time Falcon FX Anomaly Engine</p>
+  </header>
+
+  <div class="scroller">
+  <div class="canvas">
+
+    <!-- GROUPS -->
+    <!-- Group 1: Presentation & Operator Console -->
+    <div class="group ga" style="left: 20px; top: 40px; width: 440px; height: 220px;">
+      <div class="g-label"><img src="%%ICON_nextjs%%" alt="">Client Tier (Next.js 15)</div>
+    </div>
+
+    <!-- Group 2: Core Microservice Gateway & Domain Engine -->
+    <div class="group gb" style="left: 500px; top: 40px; width: 480px; height: 220px;">
+      <div class="g-label"><img src="%%ICON_fastapi%%" alt="">AntFlow Guard Core (FastAPI & PostgreSQL)</div>
+    </div>
+
+    <!-- Group 3: Enterprise Quality, Security & DevOps -->
+    <div class="group ga" style="left: 20px; top: 285px; width: 960px; height: 215px;">
+      <div class="g-label"><img src="%%ICON_githubactions%%" alt="">Quality Assurance, DevOps & Market Feeds</div>
+    </div>
+
+    <!-- EDGES -->
+    <svg class="edges" viewBox="0 0 1000 520" aria-hidden="true">
+      <defs>
+        <marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+          <path d="M0 0 L10 5 L0 10 z" fill="context-stroke"/>
+        </marker>
+      </defs>
+
+      <!-- Row 1: Primary Transaction Settlement Flow -->
+      <!-- Operator -> Next.js -->
+      <path class="e" d="M142 125 H270" marker-end="url(#ar)"/>
+      <text class="el a" x="206" y="117" text-anchor="middle">Operator UI</text>
+
+      <!-- Next.js -> FastAPI -->
+      <path class="e" d="M402 125 H570" marker-end="url(#ar)"/>
+      <text class="el a" x="486" y="117" text-anchor="middle">POST /settle (Idempotent)</text>
+
+      <!-- FastAPI -> PostgreSQL -->
+      <path class="e" d="M702 125 H800" marker-end="url(#ar)"/>
+      <text class="el a" x="751" y="117" text-anchor="middle">SELECT FOR UPDATE</text>
+
+      <!-- Row 2 Connections -->
+      <!-- Forex Market -> FastAPI (upward neutral edge) -->
+      <path class="n" d="M870 345 V220 H670" marker-end="url(#ar)"/>
+      <text class="el" x="780" y="235" text-anchor="middle">Live Interbank FX Feed</text>
+
+      <!-- Pytest & Bandit -> FastAPI (dashed CI check) -->
+      <path class="n dash" d="M640 345 V200" marker-end="url(#ar)"/>
+      <text class="el" x="650" y="270">500 Hypothesis Tests</text>
+
+      <!-- GitHub Actions -> FastAPI & Docker (dashed CI check) -->
+      <path class="n dash" d="M370 345 V200 H610" marker-end="url(#ar)"/>
+      <text class="el" x="490" y="270">Bandit SAST & AI Triage</text>
+
+      <path class="n dash" d="M140 345 V200 H578" marker-end="url(#ar)"/>
+      <text class="el" x="250" y="270">Docker Postgres 16</text>
+    </svg>
+
+    <!-- NODES -->
+    <!-- Row 1: Runtime Nodes -->
+    <!-- Node 1: Operator (cx = 110) -->
+    <div class="node" style="left: 44px; top: 95px;">
+      <div class="tile"><img src="%%ICON_user%%" alt=""></div>
+      <div class="name"><span>Operator</span></div>
+      <div class="role"><span>merchant / admin</span></div>
+    </div>
+
+    <!-- Node 2: Next.js Frontend (cx = 340) -->
+    <div class="node" style="left: 274px; top: 95px;">
+      <div class="tile"><img src="%%ICON_nextjs%%" alt=""></div>
+      <div class="name"><span>Next.js 15</span></div>
+      <div class="role"><span>react 19 + tailwind</span></div>
+    </div>
+
+    <!-- Node 3: FastAPI Backend (cx = 640) -->
+    <div class="node" style="left: 574px; top: 95px;">
+      <div class="tile"><img src="%%ICON_fastapi%%" alt=""></div>
+      <div class="name"><span>FastAPI Backend</span></div>
+      <div class="role"><span>python 3.12 + pydantic v2</span></div>
+    </div>
+
+    <!-- Node 4: PostgreSQL 16 (cx = 870) -->
+    <div class="node" style="left: 804px; top: 95px;">
+      <div class="tile"><img src="%%ICON_postgresql%%" alt=""></div>
+      <div class="name"><span>PostgreSQL 16</span></div>
+      <div class="role"><span>wallets + audit ledger</span></div>
+    </div>
+
+    <!-- Row 2: DevOps, Feeds & CI/CD Nodes -->
+    <!-- Node 5: Docker (cx = 140) -->
+    <div class="node" style="left: 74px; top: 345px;">
+      <div class="tile"><img src="%%ICON_docker%%" alt=""></div>
+      <div class="name"><span>Docker</span></div>
+      <div class="role"><span>compose + pg container</span></div>
+    </div>
+
+    <!-- Node 6: GitHub Actions (cx = 370) -->
+    <div class="node" style="left: 304px; top: 345px;">
+      <div class="tile"><img src="%%ICON_githubactions%%" alt=""></div>
+      <div class="name"><span>GitHub Actions</span></div>
+      <div class="role"><span>ci/cd + gemini triage</span></div>
+    </div>
+
+    <!-- Node 7: Pytest & Bandit (cx = 640) -->
+    <div class="node" style="left: 574px; top: 345px;">
+      <div class="tile"><img src="%%ICON_python%%" alt=""></div>
+      <div class="name"><span>Pytest & Bandit</span></div>
+      <div class="role"><span>hypothesis + sast</span></div>
+    </div>
+
+    <!-- Node 8: Forex Market (cx = 870) -->
+    <div class="node" style="left: 804px; top: 345px;">
+      <div class="tile"><img src="%%ICON_forex%%" alt=""></div>
+      <div class="name"><span>Interbank Forex</span></div>
+      <div class="role"><span>real-time rates api</span></div>
+    </div>
+
+  </div>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw"></span>primary transaction flow</span>
+    <span><span class="sw n"></span>live market data feed</span>
+    <span><span class="sw n dash"></span>ci / cd & verification</span>
+  </div>
+
+  <div class="foot">
+    <span>AntFlow Guard Architecture</span>
+    <span>icons: svgl / devicon · built with stack-diagram</span>
+  </div>
+
+</div>
+</body>
+</html>

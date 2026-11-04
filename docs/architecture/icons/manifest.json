@@ -1,0 +1,44 @@
+{
+  "nextjs": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/nextjs_icon_dark.svg",
+    "file": "nextjs.svg",
+    "bytes": 1091
+  },
+  "fastapi": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/fastapi.svg",
+    "file": "fastapi.svg",
+    "bytes": 280
+  },
+  "python": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/python.svg",
+    "file": "python.svg",
+    "bytes": 1126
+  },
+  "postgresql": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/postgresql.svg",
+    "file": "postgresql.svg",
+    "bytes": 3944
+  },
+  "docker": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/docker.svg",
+    "file": "docker.svg",
+    "bytes": 1488
+  },
+  "githubactions": {
+    "source": "gilbarbara",
+    "url": "https://cdn.jsdelivr.net/gh/gilbarbara/logos/logos/github-actions.svg",
+    "file": "githubactions.svg",
+    "bytes": 6915
+  },
+  "tailwind": {
+    "source": "devicon",
+    "url": "https://raw.githubusercontent.com/devicons/devicon/master/icons/tailwindcss/tailwindcss-original.svg",
+    "file": "tailwind.svg",
+    "bytes": 689
+  }
+}
