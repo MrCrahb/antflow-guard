@@ -1,6 +1,7 @@
 import time
 from decimal import Decimal
 from typing import Dict, Tuple
+
 import httpx
 
 # In-memory FX cache: {base_currency: (timestamp, {target_currency: Decimal(rate)})}

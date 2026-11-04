@@ -1,8 +1,9 @@
 import asyncio
 import time
 from collections import defaultdict
-from decimal import Decimal, ROUND_HALF_EVEN
+from decimal import ROUND_HALF_EVEN, Decimal
 from typing import Any, Dict, Optional, Tuple
+
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -68,9 +69,7 @@ async def settle_cross_border_payment(
         try:
             async with session.begin():
                 # Step 1: Pre-check Idempotency Key
-                existing_tx_stmt = select(Transaction).where(
-                    Transaction.idempotency_key == idempotency_key
-                )
+                existing_tx_stmt = select(Transaction).where(Transaction.idempotency_key == idempotency_key)
                 existing_tx = (await session.execute(existing_tx_stmt)).scalar_one_or_none()
 
                 if existing_tx:
@@ -121,19 +120,13 @@ async def settle_cross_border_payment(
                 settled_amount = calculate_settled_amount(payload.source_amount, payload.fx_rate)
 
                 # Fetch real-time market benchmark rate for dynamic anomaly evaluation
-                market_rate = await get_live_fx_rate(
-                    payload.source_currency, payload.settled_currency
-                )
-                risk_score, risk_meta = evaluate_transaction_risk(
-                    payload, settled_amount, market_rate=market_rate
-                )
+                market_rate = await get_live_fx_rate(payload.source_currency, payload.settled_currency)
+                risk_score, risk_meta = evaluate_transaction_risk(payload, settled_amount, market_rate=market_rate)
                 status = "FLAGGED_HIGH_RISK" if risk_score >= 60 else "SETTLED"
 
                 # Only credit wallet balance if settlement is clean
                 if status == "SETTLED":
-                    wallet.balance = (wallet.balance + settled_amount).quantize(
-                        FOUR_PLACES, rounding=ROUND_HALF_EVEN
-                    )
+                    wallet.balance = (wallet.balance + settled_amount).quantize(FOUR_PLACES, rounding=ROUND_HALF_EVEN)
                     wallet.version += 1
 
                 elapsed_ms = int((time.perf_counter() - start_time) * 1000)
@@ -186,11 +179,7 @@ async def settle_cross_border_payment(
                 await asyncio.sleep(0.05 * (attempt + 1))
                 async with session.begin():
                     existing_tx = (
-                        await session.execute(
-                            select(Transaction).where(
-                                Transaction.idempotency_key == idempotency_key
-                            )
-                        )
+                        await session.execute(select(Transaction).where(Transaction.idempotency_key == idempotency_key))
                     ).scalar_one_or_none()
 
                     if existing_tx:

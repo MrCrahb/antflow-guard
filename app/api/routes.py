@@ -1,5 +1,6 @@
 from decimal import Decimal
 from typing import Dict, List, Optional
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -113,9 +114,7 @@ async def get_merchant_reconciliation(
     tx_stmt = select(
         func.count(Transaction.id).label("total_count"),
         func.coalesce(
-            func.sum(
-                case((Transaction.status == "SETTLED", Transaction.settled_amount), else_=0)
-            ),
+            func.sum(case((Transaction.status == "SETTLED", Transaction.settled_amount), else_=0)),
             0,
         ).label("settled_sum"),
         func.coalesce(

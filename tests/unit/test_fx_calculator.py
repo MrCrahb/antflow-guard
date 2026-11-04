@@ -1,10 +1,11 @@
 from decimal import Decimal
-from hypothesis import given, settings, strategies as st
-import pytest
 
-from app.services.settlement import calculate_settled_amount, evaluate_transaction_risk
-from app.services.fx_service import get_live_fx_rate, SUPPORTED_CURRENCIES
+import pytest
+from hypothesis import given, settings, strategies as st
+
 from app.schemas.payment import PaymentSettlementRequest
+from app.services.fx_service import SUPPORTED_CURRENCIES, get_live_fx_rate
+from app.services.settlement import calculate_settled_amount, evaluate_transaction_risk
 
 FOUR_PLACES = Decimal("0.0001")
 

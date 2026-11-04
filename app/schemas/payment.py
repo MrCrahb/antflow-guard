@@ -1,15 +1,12 @@
 import uuid
 from decimal import Decimal
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
 class PaymentSettlementRequest(BaseModel):
-    merchant_id: str = Field(
-        ..., min_length=3, max_length=64, examples=["merch_gateway_01"]
-    )
-    source_amount: Decimal = Field(
-        ..., gt=Decimal("0.00"), decimal_places=4, examples=[Decimal("1000.0000")]
-    )
+    merchant_id: str = Field(..., min_length=3, max_length=64, examples=["merch_gateway_01"])
+    source_amount: Decimal = Field(..., gt=Decimal("0.00"), decimal_places=4, examples=[Decimal("1000.0000")])
     source_currency: str = Field(..., pattern="^[A-Z]{3}$", examples=["CNY"])
     settled_currency: str = Field(..., pattern="^[A-Z]{3}$", examples=["MYR"])
     fx_rate: Decimal = Field(..., gt=Decimal("0.00"), examples=[Decimal("0.648520")])

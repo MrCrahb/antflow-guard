@@ -1,0 +1,15 @@
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+    "B008",    # FastAPI Depends in function defaults is standard idiomatic FastAPI
+    "BLE001",  # Broad exception catch in API top-level handlers
+    "E501",    # Line length handled gracefully
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["app", "tests"]

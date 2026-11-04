@@ -19,7 +19,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install Linters & Security Scanners
-        run: pip install ruff bandit
+        run: pip install ruff==0.6.8 bandit==1.7.10
 
       - name: Run Ruff (Lint & Style Check)
         run: ruff check app/ tests/

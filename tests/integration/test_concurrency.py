@@ -1,7 +1,9 @@
 import asyncio
 import uuid
 from decimal import Decimal
+
 import pytest
+
 from app.models.ledger import Wallet
 from tests.conftest import TestingSessionLocal
 
