@@ -71,7 +71,7 @@ export default function Dashboard() {
   const [error, setError] = useState<string | null>(null);
 
   // Form State
-  const [merchantId, setMerchantId] = useState("merch_trx_kl_01");
+  const [merchantId, setMerchantId] = useState("merch_gateway_01");
   const [sourceAmount, setSourceAmount] = useState("1000.0000");
   const [sourceCurrency, setSourceCurrency] = useState("CNY");
   const [settledCurrency, setSettledCurrency] = useState("MYR");

@@ -7,7 +7,7 @@ async def test_idempotent_duplicate_requests(client):
     """Fire identical request 5 times in a row and assert wallet balance only increments once."""
     headers = {"X-Idempotency-Key": "tx-idempotency-key-test-999"}
     payload = {
-        "merchant_id": "merch_trx_kl_01",
+        "merchant_id": "merch_gateway_01",
         "source_amount": "1000.0000",
         "source_currency": "CNY",
         "settled_currency": "MYR",
@@ -35,7 +35,7 @@ async def test_idempotent_duplicate_requests(client):
         assert Decimal(data_replay["new_wallet_balance"]) == expected_settled
 
     # 3. Verify reconciliation ledger confirms balance is 100% matched with 0 discrepancy
-    rec_res = await client.get("/api/v1/merchants/merch_trx_kl_01/reconciliation?currency=MYR")
+    rec_res = await client.get("/api/v1/merchants/merch_gateway_01/reconciliation?currency=MYR")
     assert rec_res.status_code == 200
     rec_data = rec_res.json()
     assert rec_data["is_balanced"] is True

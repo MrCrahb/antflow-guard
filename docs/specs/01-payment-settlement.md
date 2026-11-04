@@ -30,7 +30,7 @@ To prevent severe financial loss:
 #### Request Body (JSON)
 ```json
 {
-  "merchant_id": "merch_trx_kl_01",
+  "merchant_id": "merch_gateway_01",
   "source_amount": "1000.0000",
   "source_currency": "CNY",
   "settled_currency": "MYR",
@@ -86,7 +86,7 @@ To prevent severe financial loss:
 {
   "id": "a576e27a-8f55-46eb-816b-1361c4deee68",
   "idempotency_key": "tx-uniq-999",
-  "merchant_id": "merch_trx_kl_01",
+  "merchant_id": "merch_gateway_01",
   "source_amount": "1000.0000",
   "source_currency": "CNY",
   "settled_amount": "648.5200",
