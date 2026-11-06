@@ -1,0 +1,15 @@
+.venv
+frontend/node_modules
+frontend/.next
+.git
+.pytest_cache
+.ruff_cache
+.hypothesis
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+*.log
+*.pid
+antflow.db

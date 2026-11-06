@@ -6,6 +6,7 @@ from sqlalchemy import case, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
+from app.core.metrics import record_settlement_metric
 from app.models.ledger import Transaction, Wallet
 from app.schemas.payment import (
     MerchantWalletResponse,
@@ -66,11 +67,16 @@ async def post_payment_settle(
     session: AsyncSession = Depends(get_db),
 ) -> PaymentSettlementResponse:
     try:
-        return await settle_cross_border_payment(
+        response = await settle_cross_border_payment(
             session=session,
             idempotency_key=x_idempotency_key,
             payload=payload,
         )
+        record_settlement_metric(
+            status=response.status,
+            currency=response.settled_currency,
+        )
+        return response
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

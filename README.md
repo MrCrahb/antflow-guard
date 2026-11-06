@@ -75,6 +75,7 @@ Status: FLAGGED      Status: SETTLED
 - **Operator Console:** Next.js 15 (App Router), React 19, TypeScript, Tailwind CSS, Lucide Icons.
 - **Automated Testing:** Pytest, `pytest-asyncio`, `httpx` (async ASGI client), `hypothesis` (property-based randomized testing).
 - **Security & Quality:** `bandit` (SAST scanner for FinTech vulnerabilities), `ruff` (lightning linter & formatter).
+- **Observability & SRE:** Prometheus v2.54, Grafana 11.2 (Auto-provisioned), RED metrics (Rate, Errors, Duration), p95/p99 tail latency histograms, and automated alert rules.
 - **DevOps & CI/CD:** GitHub Actions with PostgreSQL service container, automated migrations, coverage reporting, and Gemini Flash automated failure triage.
 
 ---
@@ -107,7 +108,19 @@ npm run dev
 ```
 Open [http://localhost:3000](http://localhost:3000) to open the Live Operator Console.
 
-### 3. Run Automated 3-Tier Test Suite
+### 3. Observability & SRE Dashboard Setup (Prometheus & Grafana)
+```bash
+# Launch the full microservice and observability stack
+docker compose up -d
+
+# Run the live traffic & anomaly simulator (generates normal & high-risk bursts)
+python3 scripts/simulate_traffic.py 30
+```
+- **Grafana SRE Portal:** [http://localhost:3001](http://localhost:3001) (`admin` / `admin`)
+- **Prometheus Engine & Alerts:** [http://localhost:9090](http://localhost:9090)
+- **FastAPI Metrics Endpoint:** [http://localhost:8000/metrics](http://localhost:8000/metrics)
+
+### 4. Run Automated 3-Tier Test Suite
 ```bash
 # Run 500 Hypothesis property tests + async integration + concurrency tests:
 pytest -v
@@ -138,4 +151,5 @@ As part of the AI-Native SDLC mandate, two real-world FinTech vulnerabilities we
 
 - **Core Backend & Concurrency:** *Engineered an asynchronous cross-border payment settlement API and multi-currency ledger in FastAPI and PostgreSQL, enforcing strict `NUMERIC(18, 4)` precision, `X-Idempotency-Key` deduplication, and pessimistic row-level locking (`SELECT ... FOR UPDATE`) to eliminate double-spend race conditions under concurrent load.*
 - **AI-Native Engineering & SDLC:** *Designed a spec-driven, AI-native engineering workflow governed by an explicit AI constitution (`.antigravity/rules.md`) and property-based test suites, validating sub-cent financial invariants across 500 randomized parameter matrices using Hypothesis.*
+- **Telemetry & Production Observability:** *Instrumented the microservice with Prometheus RED metrics (Rate, Errors, Duration) and business invariant counters with route-template normalization. Provisioned automated Grafana SRE dashboards tracking p50/p95/p99 latency quantiles, live error rates, and settlement risk flags.*
 - **Testing, Security & CI/CD:** *Built an enterprise multi-stage GitHub Actions CI/CD pipeline integrating Bandit SAST security scanning, ephemeral PostgreSQL service containers, and automated test suites featuring automated Gemini Flash AI failure triage on broken builds.*

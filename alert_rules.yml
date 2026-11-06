@@ -1,0 +1,32 @@
+groups:
+  - name: antflow_guard_alerts
+    rules:
+      - alert: HighRiskSettlementSpike
+        expr: rate(antflow_settlement_transactions_total{status="FLAGGED_HIGH_RISK"}[1m]) > 0
+        for: 10s
+        labels:
+          severity: warning
+          service: antflow-guard
+        annotations:
+          summary: "Sudden spike in high-risk cross-border settlements"
+          description: "High-risk transactions flagged by heuristic triage are arriving at a rate of {{ $value }} tx/s."
+
+      - alert: HighHTTP5xxErrorRate
+        expr: (sum(rate(antflow_http_requests_total{status=~"5.."}[1m])) / sum(rate(antflow_http_requests_total[1m]))) * 100 > 5
+        for: 30s
+        labels:
+          severity: critical
+          service: antflow-guard
+        annotations:
+          summary: "API HTTP 5xx error rate exceeded 5%"
+          description: "The percentage of server errors is currently {{ $value }}%."
+
+      - alert: HighP99Latency
+        expr: histogram_quantile(0.99, sum(rate(antflow_http_request_duration_seconds_bucket[1m])) by (le)) > 0.5
+        for: 30s
+        labels:
+          severity: warning
+          service: antflow-guard
+        annotations:
+          summary: "p99 payment latency exceeds 500ms"
+          description: "p99 tail latency is {{ $value }}s."
